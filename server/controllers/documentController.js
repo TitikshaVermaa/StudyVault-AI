@@ -1,8 +1,8 @@
+const path = require('path');
 const Document = require('../models/Document');
 const pdfService = require('../services/pdfService');
 const chunkService = require('../services/chunkService');
 const embeddingService = require('../services/embeddingService');
-const path = require('path');
 
 // @route   POST /api/documents/upload
 // @desc    Upload a PDF document, extract text, chunk it, and generate embeddings
@@ -12,7 +12,9 @@ exports.uploadDocument = async (req, res) => {
       return res.status(400).json({ message: 'Please upload a PDF file' });
     }
 
-    const filePath = req.file.path.replace(/\\/g, '/');
+    const filePath = path.isAbsolute(req.file.path)
+  ? req.file.path
+  : path.join(__dirname, '..', req.file.path);
     let extractedText = '';
     let chunks = [];
     let warningMessage = null;
