@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Chat = require('../models/Chat');
 const Document = require('../models/Document');
 const embeddingService = require('../services/embeddingService');
@@ -70,19 +71,17 @@ exports.getChatHistory = async (req, res) => {
   try {
     const { documentId } = req.params;
 
-    if (!documentId) {
-      return res.status(400).json({ message: 'Document ID is required' });
+    if (!documentId || !mongoose.Types.ObjectId.isValid(documentId)) {
+      return res.status(200).json([]);
     }
 
     // Only return chats belonging to logged-in user and for this specific document
-    // Sort by createdAt ascending so the UI can just append them from oldest to newest, wait
-    // "Sort chats by latest first" requested by user. Oh! I'll sort by createdAt descending, but in UI we display them in chronological order. I'll sort by createdAt asc. If user explicitly said "latest first", I will do { createdAt: -1 } and UI will need to reverse it. Wait, user says "Sort chats by latest first". Let's do that.
     const chats = await Chat.find({ documentId, userId: req.user.id })
                             .sort({ createdAt: -1 });
 
-    res.status(200).json(chats);
+    res.status(200).json(chats || []);
   } catch (error) {
-    console.error('Chat History Error:', error.message);
+    console.error('Chat History Error:', error);
     res.status(500).json({ message: 'Server error fetching chat history' });
   }
 };

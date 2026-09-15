@@ -55,16 +55,26 @@ const Chat = () => {
   // Fetch chat history when selected document changes
   useEffect(() => {
     const fetchHistory = async () => {
-      if (!selectedDocId) return;
+      if (!selectedDocId) {
+        setChatHistory([]);
+        return;
+      }
       try {
         setFetchingHistory(true);
+        setError('');
         const token = localStorage.getItem('token');
-        const res = await axios.get(`http://localhost:5000/api/chat/history/${selectedDocId}`, {
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const res = await axios.get(`${API_URL}/api/chat/history/${selectedDocId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
         // Backend returns latest first (descending). We need chronological for UI (ascending).
-        const historyData = res.data.reverse().reduce((acc, chat) => {
+        const rawChats = Array.isArray(res.data) ? res.data : [];
+        const historyData = [...rawChats].reverse().reduce((acc, chat) => {
           acc.push({ role: 'user', content: chat.question });
           acc.push({ role: 'ai', content: chat.answer });
           return acc;
@@ -72,6 +82,7 @@ const Chat = () => {
         
         setChatHistory(historyData);
       } catch (err) {
+        console.error('Failed to load chat history:', err);
         setError('Failed to load previous conversations.');
       } finally {
         setFetchingHistory(false);
@@ -79,7 +90,7 @@ const Chat = () => {
     };
     
     fetchHistory();
-  }, [selectedDocId]);
+  }, [selectedDocId, navigate]);
 
   // Scroll to bottom of chat when new message appears
   useEffect(() => {
