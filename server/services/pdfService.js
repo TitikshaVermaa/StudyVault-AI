@@ -2,19 +2,25 @@ const fs = require('fs');
 const path = require('path');
 const pdfParse = require('pdf-parse');
 /**
- * Reads a PDF file from the given path and extracts its text content.
- * @param {string} filePath - The path to the uploaded PDF file.
+ * Reads a PDF from a buffer or file path and extracts its text content.
+ * @param {Buffer|string} input - The PDF buffer or file path.
  * @returns {Promise<string>} - The extracted text from the PDF.
  */
-const extractTextFromPDF = async (filePath) => {
+const extractTextFromPDF = async (input) => {
   try {
-    // Read the PDF file into a buffer
-    const absolutePath = path.isAbsolute(filePath)
-  ? filePath
-  : path.join(__dirname, '..', filePath);
+    let dataBuffer;
 
-const dataBuffer = fs.readFileSync(absolutePath);
-    
+    if (Buffer.isBuffer(input)) {
+      dataBuffer = input;
+    } else if (typeof input === 'string') {
+      const absolutePath = path.isAbsolute(input)
+        ? input
+        : path.join(__dirname, '..', input);
+      dataBuffer = fs.readFileSync(absolutePath);
+    } else {
+      throw new Error('Invalid input: expected a Buffer or file path string');
+    }
+
     // Parse the PDF buffer to extract text
     const data = await pdfParse(dataBuffer);
     

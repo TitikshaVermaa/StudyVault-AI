@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const Document = require('../models/Document');
 const pdfService = require('../services/pdfService');
 const chunkService = require('../services/chunkService');
@@ -12,16 +13,13 @@ exports.uploadDocument = async (req, res) => {
       return res.status(400).json({ message: 'Please upload a PDF file' });
     }
 
-    const filePath = path.isAbsolute(req.file.path)
-  ? req.file.path
-  : path.join(__dirname, '..', req.file.path);
     let extractedText = '';
     let chunks = [];
     let warningMessage = null;
 
-    // 1. Extract text from the uploaded PDF
+    // 1. Extract text from the uploaded PDF buffer
     try {
-      extractedText = await pdfService.extractTextFromPDF(req.file.path);
+      extractedText = await pdfService.extractTextFromPDF(req.file.buffer);
       
       if (!extractedText || extractedText.length === 0) {
         warningMessage = 'Document uploaded successfully, but no readable text could be extracted.';
@@ -59,7 +57,7 @@ exports.uploadDocument = async (req, res) => {
     const newDocument = new Document({
       userId: req.user.id,
       fileName: req.file.originalname,
-      filePath: filePath,
+      filePath: '',
       extractedText: extractedText,
       chunks: chunks
     });
@@ -89,8 +87,6 @@ exports.getDocuments = async (req, res) => {
   }
 };
 
-const fs = require('fs');
-
 // @route   DELETE /api/documents/:id
 // @desc    Delete a document by ID
 exports.deleteDocument = async (req, res) => {
@@ -103,14 +99,18 @@ exports.deleteDocument = async (req, res) => {
       return res.status(404).json({ message: 'Document not found or unauthorized' });
     }
 
-    // 2. Delete PDF file from uploads folder
-    const fullPath = path.join(__dirname, '..', document.filePath);
-    try {
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
+    // 2. Delete PDF file from uploads folder if filePath exists on disk
+    if (document.filePath) {
+      const fullPath = path.isAbsolute(document.filePath)
+        ? document.filePath
+        : path.join(__dirname, '..', document.filePath);
+      try {
+        if (fs.existsSync(fullPath) && fs.lstatSync(fullPath).isFile()) {
+          fs.unlinkSync(fullPath);
+        }
+      } catch (fsError) {
+        console.warn('Could not delete file from filesystem:', fsError.message);
       }
-    } catch (fsError) {
-      console.warn('Could not delete file from filesystem:', fsError.message);
     }
 
     // 3. Delete MongoDB document

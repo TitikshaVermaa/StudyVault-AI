@@ -1,17 +1,6 @@
 const multer = require('multer');
-const path = require('path');
-
-// Configure storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Save files in the uploads folder
-  },
-  filename: function (req, file, cb) {
-    // Generate a unique filename using timestamp and original name
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Configure memory storage instead of disk storage to avoid ephemeral filesystem issues on cloud hosts
+const storage = multer.memoryStorage();
 
 // File filter to accept only PDFs
 const fileFilter = (req, file, cb) => {
